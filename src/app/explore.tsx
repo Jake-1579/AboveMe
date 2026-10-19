@@ -1,6 +1,8 @@
 import { Image } from 'expo-image';
+import * as Notifications from 'expo-notifications';
 import { SymbolView } from 'expo-symbols';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useEffect } from 'react';
+import { Alert, Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExternalLink } from '@/components/external-link';
@@ -11,7 +13,53 @@ import { WebBadge } from '@/components/web-badge';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+async function showPlaneNotification() {
+  try {
+    const currentPermission = await Notifications.getPermissionsAsync();
+    const { granted } = currentPermission.granted
+      ? currentPermission
+      : await Notifications.requestPermissionsAsync();
+
+    if (!granted) {
+      Alert.alert(
+        'Notifications are disabled',
+        'Enable notifications in your device settings to test plane alerts.'
+      );
+      return;
+    }
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: 'Plane overhead',
+        body: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
+      },
+      trigger: null,
+    });
+  } catch (error) {
+    console.error('Unable to schedule test notification:', error);
+    Alert.alert(
+      'Notification unavailable',
+      error instanceof Error ? error.message : 'Please try again.'
+    );
+  }
+}
+
 export default function TabTwoScreen() {
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      void showPlaneNotification();
+    }
+  }, []);
+
   const safeAreaInsets = useSafeAreaInsets();
   const insets = {
     ...safeAreaInsets,
